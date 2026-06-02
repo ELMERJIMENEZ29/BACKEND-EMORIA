@@ -12,7 +12,7 @@ class DiaryEntryController extends Controller
     {
         $entries = DiaryEntry::where('user_id', $request->user()->id)
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(20);
 
         return response()->json($entries);
     }

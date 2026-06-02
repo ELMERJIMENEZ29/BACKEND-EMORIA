@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DiaryEntryController;
+use App\Http\Controllers\ChatMessageController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -21,4 +22,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/diary',         [DiaryEntryController::class, 'store']);
     Route::get('/diary/{entry}',  [DiaryEntryController::class, 'show']);
     Route::delete('/diary/{entry}', [DiaryEntryController::class, 'destroy']);
+
+    // Chat
+    Route::get('/chat',  [ChatMessageController::class, 'index']);
+    Route::post('/chat', [ChatMessageController::class, 'sendMessage']);
 });
