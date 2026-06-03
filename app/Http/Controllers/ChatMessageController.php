@@ -17,7 +17,7 @@ class ChatMessageController extends Controller
         // Obtener historial reciente para dar contexto al bot
         $history = ChatMessage::where('user_id', $request->user()->id)
             ->orderBy('created_at', 'desc')
-            ->take(5)
+            ->take(10)
             ->get()
             ->reverse()
             ->flatMap(fn($msg) => [
@@ -36,13 +36,14 @@ class ChatMessageController extends Controller
         // Llamada a Gemini
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
-        ])->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . env('GEMINI_API_KEY'), [
+        ])->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . env('GEMINI_API_KEY'), [
             'system_instruction' => [
                 'parts' => [['text' => 'Eres un asistente de apoyo emocional empático y comprensivo. Responde siempre en español de forma cálida y breve.']]
             ],
             'contents' => $history,
         ]);
 
+        // return response()->json($response->json()); // 👈 cambia dd por esto
         $botResponse = $response->json('candidates.0.content.parts.0.text') ?? 'No pude procesar tu mensaje.';
 
         // Guardar en BD
