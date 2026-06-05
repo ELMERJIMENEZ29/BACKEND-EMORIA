@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class ActivityLog extends Model
 {
-     use HasFactory;
+    use HasFactory;
 
     protected $fillable = ['user_id', 'type', 'duration_seconds'];
 

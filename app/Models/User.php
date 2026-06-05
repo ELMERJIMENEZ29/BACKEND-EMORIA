@@ -25,6 +25,9 @@ class User extends Authenticatable
     protected $fillable = [
         'username',
         'password',
+        'gender',
+        'universe',
+        'avatar',
     ];
 
     /**
@@ -48,5 +51,16 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function getAvatarUrlAttribute()
+    {
+        if (!$this->avatar) return null;
+
+        if (str_starts_with($this->avatar, 'http')) {
+            return $this->avatar;
+        }
+
+        return asset('storage/' . ltrim($this->avatar, '/'));
     }
 }

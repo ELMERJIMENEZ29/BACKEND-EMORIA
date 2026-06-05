@@ -8,6 +8,7 @@ use App\Http\Controllers\ChatMessageController;
 use App\Http\Controllers\EmotionalHistoryController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\EmotionLogController;
+use App\Http\Controllers\ProfileController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -36,8 +37,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/emotional-history/{emotionalHistory}', [EmotionalHistoryController::class, 'destroy']);
 
     //ACTIVIDADES
-     Route::post('/activities',       [ActivityLogController::class, 'store']);
+    Route::post('/activities',       [ActivityLogController::class, 'store']);
     Route::get('/activities/stats',  [ActivityLogController::class, 'stats']);
+    
+    // Perfil
+    Route::post('/profile', [ProfileController::class, 'update']);
     
 
     //EMOTIONS
