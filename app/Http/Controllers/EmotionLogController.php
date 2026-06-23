@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\EmotionalHistory;
 use App\Models\EmotionLog;
 
 class EmotionLogController extends Controller
@@ -18,6 +19,15 @@ class EmotionLogController extends Controller
             'emotion' => strtolower($request->emotion),
         ]);
 
-        return response()->json($log, 201);
+        $history = EmotionalHistory::create([
+            'user_id' => $request->user()->id,
+            'companion' => 'emotion-model',
+            'recognized_emotion' => $log->emotion,
+        ]);
+
+        return response()->json([
+            'emotion_log' => $log,
+            'emotional_history' => $history,
+        ], 201);
     }
 }

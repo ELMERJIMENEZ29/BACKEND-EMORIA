@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             if (!Schema::hasColumn('users', 'gender')) {
-                $table->string('gender')->nullable()->after('email');
+                $table->string('gender')->nullable()->after('password');
             }
 
             if (!Schema::hasColumn('users', 'universe')) {

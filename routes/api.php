@@ -9,6 +9,10 @@ use App\Http\Controllers\EmotionalHistoryController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\EmotionLogController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\SecurityController;
+use App\Http\Controllers\AccountController;
+use App\Http\Controllers\CriticalAlertController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -34,6 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Historial emocional
     Route::get('/emotional-history',        [EmotionalHistoryController::class, 'index']);
     Route::post('/emotional-history',       [EmotionalHistoryController::class, 'store']);
+    Route::get('/emotional-history/export/pdf', [EmotionalHistoryController::class, 'exportPdf']);
     Route::delete('/emotional-history/{emotionalHistory}', [EmotionalHistoryController::class, 'destroy']);
 
     //ACTIVIDADES
@@ -42,6 +47,19 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Perfil
     Route::post('/profile', [ProfileController::class, 'update']);
+
+    // Configuracion
+    Route::get('/settings', [SettingsController::class, 'show']);
+    Route::match(['put', 'patch'], '/settings', [SettingsController::class, 'update']);
+    Route::get('/critical-alerts', [CriticalAlertController::class, 'index']);
+    Route::post('/critical-alerts', [CriticalAlertController::class, 'store']);
+
+    // Seguridad
+    Route::post('/change-password', [SecurityController::class, 'changePassword']);
+    Route::post('/2fa/enable', [SecurityController::class, 'enableTwoFactor']);
+    Route::post('/2fa/verify', [SecurityController::class, 'verifyTwoFactor']);
+    Route::post('/2fa/disable', [SecurityController::class, 'disableTwoFactor']);
+    Route::delete('/account', [AccountController::class, 'destroy']);
     
 
     //EMOTIONS

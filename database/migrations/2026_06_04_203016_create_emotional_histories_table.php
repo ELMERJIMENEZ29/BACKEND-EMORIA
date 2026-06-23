@@ -14,14 +14,14 @@ return new class extends Migration
         Schema::create('emotional_histories', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->string('companion');
+            $table->string('companion')->default('emotion-model');
             $table->string('recognized_emotion')->nullable();
-            $table->integer('depression_score');
-            $table->integer('anxiety_score');
-            $table->integer('stress_score');
-            $table->string('depression_severity');
-            $table->string('anxiety_severity');
-            $table->string('stress_severity');
+            $table->integer('depression_score')->nullable();
+            $table->integer('anxiety_score')->nullable();
+            $table->integer('stress_score')->nullable();
+            $table->string('depression_severity')->nullable();
+            $table->string('anxiety_severity')->nullable();
+            $table->string('stress_severity')->nullable();
             $table->timestamps();
         });
     }

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('activity_logs', function (Blueprint $table) {
             if (!Schema::hasColumn('activity_logs', 'user_id')) {
-                $table->foreignId('user_id')->nullable()->constrained()->after('id');
+                $table->foreignId('user_id')->nullable()->constrained()->cascadeOnDelete()->after('id');
             }
 
             if (!Schema::hasColumn('activity_logs', 'type')) {

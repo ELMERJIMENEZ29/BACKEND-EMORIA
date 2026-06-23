@@ -59,6 +59,9 @@ class ActivityLogController extends Controller
 
         // Último DASS-21
         $lastDass  = EmotionalHistory::where('user_id', $userId)
+            ->whereNotNull('depression_score')
+            ->whereNotNull('anxiety_score')
+            ->whereNotNull('stress_score')
             ->orderBy('created_at', 'desc')
             ->first();
 
@@ -109,6 +112,9 @@ class ActivityLogController extends Controller
 
             $dasOfDay = EmotionalHistory::where('user_id', $userId)
                 ->whereDate('created_at', $day->toDateString())
+                ->whereNotNull('depression_score')
+                ->whereNotNull('anxiety_score')
+                ->whereNotNull('stress_score')
                 ->first();
 
             // Emociones del día
