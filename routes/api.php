@@ -11,6 +11,7 @@ use App\Http\Controllers\EmotionLogController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SecurityController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CriticalAlertController;
 
@@ -21,6 +22,8 @@ Route::get('/user', function (Request $request) {
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink']);
+Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
