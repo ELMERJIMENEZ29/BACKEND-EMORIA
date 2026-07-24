@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\EmotionalHistory;
+use Illuminate\Http\Request;
 
 class EmotionalHistoryController extends Controller
 {
@@ -19,35 +19,55 @@ class EmotionalHistoryController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'companion'           => 'nullable|string',
-            'recognized_emotion'  => 'nullable|string',
-            'depression_score'    => 'nullable|integer',
-            'anxiety_score'       => 'nullable|integer',
-            'stress_score'        => 'nullable|integer',
-            'depression_severity' => 'nullable|string',
-            'anxiety_severity'    => 'nullable|string',
-            'stress_severity'     => 'nullable|string',
+            'companion' => 'nullable|string',
+            'recognized_emotion' => 'nullable|string',
+            'depression_score' => 'nullable|integer|min:0|max:42|required_with:anxiety_score,stress_score',
+            'anxiety_score' => 'nullable|integer|min:0|max:42|required_with:depression_score,stress_score',
+            'stress_score' => 'nullable|integer|min:0|max:42|required_with:depression_score,anxiety_score',
         ]);
 
-        if (!$request->filled('recognized_emotion') && !$request->filled('depression_score')) {
+        if (! $request->filled('recognized_emotion') && ! $request->filled('depression_score')) {
             return response()->json([
                 'message' => 'Debes enviar una emocion reconocida o resultados DASS',
             ], 422);
         }
 
         $entry = EmotionalHistory::create([
-            'user_id'             => $request->user()->id,
-            'companion'           => $request->companion ?? 'emotion-model',
-            'recognized_emotion'  => $request->filled('recognized_emotion') ? strtolower($request->recognized_emotion) : null,
-            'depression_score'    => $request->depression_score,
-            'anxiety_score'       => $request->anxiety_score,
-            'stress_score'        => $request->stress_score,
-            'depression_severity' => $request->depression_severity,
-            'anxiety_severity'    => $request->anxiety_severity,
-            'stress_severity'     => $request->stress_severity,
+            'user_id' => $request->user()->id,
+            'companion' => $request->companion ?? 'emotion-model',
+            'recognized_emotion' => $request->filled('recognized_emotion') ? strtolower($request->recognized_emotion) : null,
+            'depression_score' => $request->depression_score,
+            'anxiety_score' => $request->anxiety_score,
+            'stress_score' => $request->stress_score,
+            'depression_severity' => $request->depression_score !== null
+                ? $this->severityFor($request->depression_score, 'depression')
+                : null,
+            'anxiety_severity' => $request->anxiety_score !== null
+                ? $this->severityFor($request->anxiety_score, 'anxiety')
+                : null,
+            'stress_severity' => $request->stress_score !== null
+                ? $this->severityFor($request->stress_score, 'stress')
+                : null,
         ]);
 
         return response()->json($entry, 201);
+    }
+
+    private function severityFor(int $score, string $category): string
+    {
+        $thresholds = [
+            'depression' => [28, 21, 14, 10],
+            'anxiety' => [20, 15, 10, 8],
+            'stress' => [34, 26, 19, 15],
+        ][$category];
+
+        return match (true) {
+            $score >= $thresholds[0] => 'Intensidad muy alta',
+            $score >= $thresholds[1] => 'Intensidad alta',
+            $score >= $thresholds[2] => 'Intensidad moderada',
+            $score >= $thresholds[3] => 'Intensidad leve',
+            default => 'Rango esperado',
+        };
     }
 
     public function destroy(Request $request, EmotionalHistory $emotionalHistory)
@@ -84,15 +104,15 @@ class EmotionalHistoryController extends Controller
         $content .= $this->pdfText('EMORIA', 52, $y, 26, 'F2', [39, 55, 77]);
         $content .= $this->pdfText('Historial emocional', 52, $y - 26, 16, 'F2', [56, 95, 91]);
         $content .= $this->pdfText('Un resumen pensado para observar tu proceso con calma y amabilidad.', 52, $y - 48, 10, 'F1', [86, 100, 119]);
-        $content .= $this->pdfText('Usuario: ' . $user->username, 390, $y - 2, 10, 'F1', [86, 100, 119]);
-        $content .= $this->pdfText('Generado: ' . now()->format('Y-m-d H:i'), 390, $y - 18, 10, 'F1', [86, 100, 119]);
+        $content .= $this->pdfText('Usuario: '.$user->username, 390, $y - 2, 10, 'F1', [86, 100, 119]);
+        $content .= $this->pdfText('Generado: '.now()->format('Y-m-d H:i'), 390, $y - 18, 10, 'F1', [86, 100, 119]);
 
         $summary = $this->emotionalSummary($entries);
         $content .= $this->roundedCard(52, 610, 508, 86, [238, 247, 244], [179, 219, 210]);
         $content .= $this->pdfText('Resumen de bienestar', 72, 670, 14, 'F2', [39, 55, 77]);
-        $content .= $this->pdfText('Registros: ' . $entries->count(), 72, 646, 11, 'F2', [56, 95, 91]);
-        $content .= $this->pdfText('Promedio DASS: ' . $summary['average_score'], 195, 646, 11, 'F2', [56, 95, 91]);
-        $content .= $this->pdfText('Ultima emocion: ' . $summary['last_emotion'], 345, 646, 11, 'F2', [56, 95, 91]);
+        $content .= $this->pdfText('Registros: '.$entries->count(), 72, 646, 11, 'F2', [56, 95, 91]);
+        $content .= $this->pdfText('Promedio DASS: '.$summary['average_score'], 195, 646, 11, 'F2', [56, 95, 91]);
+        $content .= $this->pdfText('Ultima emocion: '.$summary['last_emotion'], 345, 646, 11, 'F2', [56, 95, 91]);
         $content .= $this->pdfText('Este documento no te define: solo ayuda a notar patrones y pedir apoyo a tiempo.', 72, 624, 10, 'F1', [86, 100, 119]);
 
         $content .= $this->sectionTitle('Acompanamiento emocional', 52, 568);
@@ -115,7 +135,7 @@ class EmotionalHistoryController extends Controller
 
         foreach ($entries as $entry) {
             if ($y < 170) {
-                $pages[] = $content . $this->pageFooter(count($pages) + 1);
+                $pages[] = $content.$this->pageFooter(count($pages) + 1);
                 $content = $this->startDesignedPage();
                 $content .= $this->pdfText('EMORIA - Historial emocional', 52, 785, 14, 'F2', [39, 55, 77]);
                 $content .= $this->pdfText('Continuacion de registros', 52, 766, 10, 'F1', [86, 100, 119]);
@@ -126,7 +146,7 @@ class EmotionalHistoryController extends Controller
             $y -= 150;
         }
 
-        $pages[] = $content . $this->pageFooter(count($pages) + 1);
+        $pages[] = $content.$this->pageFooter(count($pages) + 1);
 
         return $this->buildPdfFromPages($pages);
     }
@@ -151,10 +171,10 @@ class EmotionalHistoryController extends Controller
             ];
         }
 
-        $dassEntries = $entries->filter(fn($entry) => $this->hasDassScores($entry));
+        $dassEntries = $entries->filter(fn ($entry) => $this->hasDassScores($entry));
         $average = $dassEntries->isEmpty()
             ? 'Sin datos DASS'
-            : round($dassEntries->avg(fn($entry) => $entry->depression_score + $entry->anxiety_score + $entry->stress_score), 1);
+            : round($dassEntries->avg(fn ($entry) => $entry->depression_score + $entry->anxiety_score + $entry->stress_score), 1);
 
         return [
             'average_score' => $average,
@@ -166,10 +186,10 @@ class EmotionalHistoryController extends Controller
     {
         $content = $this->roundedCard($x, $y - 120, 508, 126, [255, 255, 255], [223, 230, 236]);
         $content .= $this->pdfText($entry->created_at->format('Y-m-d H:i'), $x + 18, $y - 20, 10, 'F2', [56, 95, 91]);
-        $content .= $this->pdfText('Companion: ' . $entry->companion, $x + 150, $y - 20, 10, 'F1', [86, 100, 119]);
-        $content .= $this->pdfText('Emocion reconocida: ' . ($entry->recognized_emotion ?? 'N/A'), $x + 318, $y - 20, 10, 'F1', [86, 100, 119]);
+        $content .= $this->pdfText('Companion: '.$entry->companion, $x + 150, $y - 20, 10, 'F1', [86, 100, 119]);
+        $content .= $this->pdfText('Emocion reconocida: '.($entry->recognized_emotion ?? 'N/A'), $x + 318, $y - 20, 10, 'F1', [86, 100, 119]);
 
-        if (!$this->hasDassScores($entry)) {
+        if (! $this->hasDassScores($entry)) {
             $content .= $this->pdfText('Registro generado por el modelo de reconocimiento emocional.', $x + 18, $y - 56, 11, 'F2', [39, 55, 77]);
             $content .= $this->pdfText('Este dato muestra la emocion detectada para el usuario en ese momento.', $x + 18, $y - 78, 10, 'F1', [86, 100, 119]);
             $content .= $this->pdfText('Usalo como una senal suave para acompanar, no como diagnostico.', $x + 18, $y - 98, 10, 'F1', [86, 100, 119]);
@@ -203,30 +223,35 @@ class EmotionalHistoryController extends Controller
         $content = $this->pdfText($label, $x, $y, 9, 'F2', [39, 55, 77]);
         $content .= $this->rect($x + 72, $y - 4, $barWidth, 7, [231, 236, 240]);
         $content .= $this->rect($x + 72, $y - 4, $filledWidth, 7, $color);
-        $content .= $this->pdfText($score . ' - ' . $severity, $x + 230, $y, 9, 'F1', [86, 100, 119]);
+        $content .= $this->pdfText($score.' - '.$severity, $x + 230, $y, 9, 'F1', [86, 100, 119]);
 
         return $content;
     }
 
     private function supportMessage(EmotionalHistory $entry): string
     {
-        $total = $entry->depression_score + $entry->anxiety_score + $entry->stress_score;
+        $severities = [
+            $entry->depression_severity,
+            $entry->anxiety_severity,
+            $entry->stress_severity,
+        ];
 
-        if ($total >= 70) {
-            return 'Senal de cuidado: busca acompanamiento cercano hoy.';
+        if (in_array('Intensidad muy alta', $severities, true)
+            || in_array('Intensidad alta', $severities, true)) {
+            return 'Puede ser util conversar con un profesional.';
         }
 
-        if ($total >= 40) {
-            return 'Date una pausa, respira y comparte como te sientes.';
+        if (in_array('Intensidad moderada', $severities, true)) {
+            return 'Observa esta senal y considera compartir como te sientes.';
         }
 
-        return 'Buen momento para sostener habitos que te hacen bien.';
+        return 'Este registro no reemplaza una evaluacion profesional.';
     }
 
     private function sectionTitle(string $text, int $x, int $y): string
     {
         return $this->pdfText($text, $x, $y, 14, 'F2', [39, 55, 77])
-            . $this->rect($x, $y - 10, 42, 3, [97, 160, 143]);
+            .$this->rect($x, $y - 10, 42, 3, [97, 160, 143]);
     }
 
     private function paragraph(string $text, int $x, int $y, int $charsPerLine, int $size, array $color): string
@@ -254,7 +279,7 @@ class EmotionalHistoryController extends Controller
     private function pageFooter(int $page): string
     {
         return $this->pdfText('EMORIA acompana tu bienestar emocional. Si estas en riesgo inmediato, contacta a emergencias o a una persona de confianza.', 52, 20, 8, 'F1', [238, 247, 244])
-            . $this->pdfText('Pagina ' . $page, 540, 20, 8, 'F1', [238, 247, 244]);
+            .$this->pdfText('Pagina '.$page, 540, 20, 8, 'F1', [238, 247, 244]);
     }
 
     private function buildPdfFromPages(array $pages): string
@@ -273,10 +298,10 @@ class EmotionalHistoryController extends Controller
             $pageObjectIds[] = $pageObjectId;
 
             $objects[$pageObjectId] = "{$pageObjectId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Resources << /Font << /F1 {$fontObjectId} 0 R /F2 {$boldFontObjectId} 0 R >> >> /Contents {$contentObjectId} 0 R >>\nendobj\n";
-            $objects[$contentObjectId] = "{$contentObjectId} 0 obj\n<< /Length " . strlen($pageContent) . " >>\nstream\n{$pageContent}endstream\nendobj\n";
+            $objects[$contentObjectId] = "{$contentObjectId} 0 obj\n<< /Length ".strlen($pageContent)." >>\nstream\n{$pageContent}endstream\nendobj\n";
         }
 
-        $objects[2] = "2 0 obj\n<< /Type /Pages /Kids [" . implode(' ', array_map(fn($id) => "{$id} 0 R", $pageObjectIds)) . "] /Count " . count($pageObjectIds) . " >>\nendobj\n";
+        $objects[2] = "2 0 obj\n<< /Type /Pages /Kids [".implode(' ', array_map(fn ($id) => "{$id} 0 R", $pageObjectIds)).'] /Count '.count($pageObjectIds)." >>\nendobj\n";
         $objects[$fontObjectId] = "{$fontObjectId} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n";
         $objects[$boldFontObjectId] = "{$boldFontObjectId} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n";
         ksort($objects);
@@ -291,14 +316,14 @@ class EmotionalHistoryController extends Controller
 
         $xref = strlen($pdf);
         $maxObjectId = max(array_keys($objects));
-        $pdf .= "xref\n0 " . ($maxObjectId + 1) . "\n";
+        $pdf .= "xref\n0 ".($maxObjectId + 1)."\n";
         $pdf .= "0000000000 65535 f \n";
 
         for ($i = 1; $i <= $maxObjectId; $i++) {
-            $pdf .= str_pad((string) $offsets[$i], 10, '0', STR_PAD_LEFT) . " 00000 n \n";
+            $pdf .= str_pad((string) $offsets[$i], 10, '0', STR_PAD_LEFT)." 00000 n \n";
         }
 
-        $pdf .= "trailer\n<< /Size " . ($maxObjectId + 1) . " /Root 1 0 R >>\n";
+        $pdf .= "trailer\n<< /Size ".($maxObjectId + 1)." /Root 1 0 R >>\n";
         $pdf .= "startxref\n{$xref}\n%%EOF";
 
         return $pdf;
@@ -333,17 +358,17 @@ class EmotionalHistoryController extends Controller
         $c = $radius * 0.55228475;
 
         return "{$r} {$g} {$b} rg\n"
-            . ($x + $radius) . " {$y} m\n"
-            . ($x + $radius) . ' ' . ($y + $c) . ' ' . ($x + $c) . ' ' . ($y + $radius) . " {$x} " . ($y + $radius) . " c\n"
-            . ($x - $c) . ' ' . ($y + $radius) . ' ' . ($x - $radius) . ' ' . ($y + $c) . ' ' . ($x - $radius) . " {$y} c\n"
-            . ($x - $radius) . ' ' . ($y - $c) . ' ' . ($x - $c) . ' ' . ($y - $radius) . " {$x} " . ($y - $radius) . " c\n"
-            . ($x + $c) . ' ' . ($y - $radius) . ' ' . ($x + $radius) . ' ' . ($y - $c) . ' ' . ($x + $radius) . " {$y} c\n"
-            . "f\n";
+            .($x + $radius)." {$y} m\n"
+            .($x + $radius).' '.($y + $c).' '.($x + $c).' '.($y + $radius)." {$x} ".($y + $radius)." c\n"
+            .($x - $c).' '.($y + $radius).' '.($x - $radius).' '.($y + $c).' '.($x - $radius)." {$y} c\n"
+            .($x - $radius).' '.($y - $c).' '.($x - $c).' '.($y - $radius)." {$x} ".($y - $radius)." c\n"
+            .($x + $c).' '.($y - $radius).' '.($x + $radius).' '.($y - $c).' '.($x + $radius)." {$y} c\n"
+            ."f\n";
     }
 
     private function rgb(array $color): array
     {
-        return array_map(fn($value) => round($value / 255, 3), $color);
+        return array_map(fn ($value) => round($value / 255, 3), $color);
     }
 
     private function sanitizePdfText(string $text): string
