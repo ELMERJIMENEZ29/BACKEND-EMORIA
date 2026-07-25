@@ -9,7 +9,10 @@ class SettingsController extends Controller
 {
     public function show(Request $request)
     {
-        return response()->json($this->settingsFor($request));
+        return response()->json([
+            ...$this->settingsFor($request)->toArray(),
+            'two_factor_enabled' => $request->user()->hasTwoFactorEnabled(),
+        ]);
     }
 
     public function update(Request $request)
@@ -27,7 +30,10 @@ class SettingsController extends Controller
             $validated
         );
 
-        return response()->json($settings);
+        return response()->json([
+            ...$settings->toArray(),
+            'two_factor_enabled' => $request->user()->hasTwoFactorEnabled(),
+        ]);
     }
 
     private function settingsFor(Request $request): UserSetting

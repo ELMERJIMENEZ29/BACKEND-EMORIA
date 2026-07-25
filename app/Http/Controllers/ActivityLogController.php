@@ -31,6 +31,8 @@ class ActivityLogController extends Controller
     {
         $userId = $request->user()->id;
         $now = Carbon::now();
+        $weekStart = $now->copy()->subDays(6)->startOfDay();
+        $weekEnd = $now->copy()->endOfDay();
 
         // Las expresiones faciales se conservan como señales categóricas.
         // No se transforman en una puntuación de salud o bienestar.
@@ -47,16 +49,17 @@ class ActivityLogController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        // Racha
+        // Racha: una sola consulta para obtener los días con actividad.
+        $activeDates = ActivityLog::where('user_id', $userId)
+            ->selectRaw('DATE(created_at) as activity_date')
+            ->distinct()
+            ->orderByDesc('activity_date')
+            ->pluck('activity_date')
+            ->mapWithKeys(static fn ($date) => [(string) $date => true]);
+
         $streak = 0;
         $checkDay = $now->copy();
-        while (true) {
-            $hasActivity = ActivityLog::where('user_id', $userId)
-                ->whereDate('created_at', $checkDay->toDateString())
-                ->exists();
-            if (! $hasActivity) {
-                break;
-            }
+        while ($activeDates->has($checkDay->toDateString())) {
             $streak++;
             $checkDay->subDay();
         }
@@ -70,27 +73,37 @@ class ActivityLogController extends Controller
         // Entradas del diario
         $diaryCount = DiaryEntry::where('user_id', $userId)->count();
 
-        // Evolución últimos 7 días
+        // La evolución semanal se resuelve con dos consultas agrupadas, no
+        // con dos consultas nuevas por cada día.
+        $weeklyDass = EmotionalHistory::where('user_id', $userId)
+            ->whereBetween('created_at', [$weekStart, $weekEnd])
+            ->whereNotNull('depression_score')
+            ->whereNotNull('anxiety_score')
+            ->whereNotNull('stress_score')
+            ->orderByDesc('created_at')
+            ->get()
+            ->groupBy(static fn (EmotionalHistory $entry) => $entry->created_at->toDateString())
+            ->map(static fn ($entries) => $entries->first());
+
+        $weeklyActivityCounts = ActivityLog::where('user_id', $userId)
+            ->whereBetween('created_at', [$weekStart, $weekEnd])
+            ->selectRaw('DATE(created_at) as activity_date, COUNT(*) as total')
+            ->groupBy('activity_date')
+            ->pluck('total', 'activity_date');
+
         $weeklyData = [];
         for ($i = 6; $i >= 0; $i--) {
             $day = $now->copy()->subDays($i);
             $dayLabel = $day->locale('es')->isoFormat('ddd');
-
-            $dasOfDay = EmotionalHistory::where('user_id', $userId)
-                ->whereDate('created_at', $day->toDateString())
-                ->whereNotNull('depression_score')
-                ->whereNotNull('anxiety_score')
-                ->whereNotNull('stress_score')
-                ->first();
+            $dateKey = $day->toDateString();
+            $dasOfDay = $weeklyDass->get($dateKey);
 
             $weeklyData[] = [
                 'day' => ucfirst($dayLabel),
                 'depression_score' => $dasOfDay?->depression_score,
                 'anxiety_score' => $dasOfDay?->anxiety_score,
                 'stress_score' => $dasOfDay?->stress_score,
-                'sessions' => ActivityLog::where('user_id', $userId)
-                    ->whereDate('created_at', $day->toDateString())
-                    ->count(),
+                'sessions' => (int) ($weeklyActivityCounts->get($dateKey) ?? 0),
             ];
         }
 
