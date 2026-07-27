@@ -26,6 +26,7 @@ class User extends Authenticatable
         'username',
         'email',
         'password',
+        'role',
         'gender',
         'universe',
         'avatar',
@@ -61,6 +62,16 @@ class User extends Authenticatable
     public function settings()
     {
         return $this->hasOne(UserSetting::class);
+    }
+
+    public function emotionalHistories()
+    {
+        return $this->hasMany(EmotionalHistory::class);
+    }
+
+    public function emotionLogs()
+    {
+        return $this->hasMany(EmotionLog::class);
     }
 
     public function hasTwoFactorEnabled(): bool

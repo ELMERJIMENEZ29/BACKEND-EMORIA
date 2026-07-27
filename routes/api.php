@@ -14,6 +14,7 @@ use App\Http\Controllers\SecurityController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CriticalAlertController;
+use App\Http\Controllers\AdminController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -67,4 +68,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //EMOTIONS
     Route::post('/emotions', [EmotionLogController::class, 'store']);
+
+    Route::prefix('admin')->middleware('admin')->group(function () {
+        Route::get('/stats', [AdminController::class, 'stats']);
+        Route::get('/users', [AdminController::class, 'users']);
+        Route::get('/users/{user}/evolution', [AdminController::class, 'userEvolution']);
+    });
 });
